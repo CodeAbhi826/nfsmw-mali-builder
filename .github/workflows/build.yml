@@ -75,6 +75,11 @@ jobs:
           clang++ --version | head -1
           ninja --version
 
+      - name: Install host build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-xcb-dev libxcb1-dev libx11-dev libxext-dev libxrandr-dev libxi-dev libxkbcommon-dev
+
       - name: Build host rexglue code generator
         working-directory: src
         run: |
