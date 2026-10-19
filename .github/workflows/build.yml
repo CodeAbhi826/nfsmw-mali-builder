@@ -99,7 +99,7 @@ jobs:
             cat app/codegen.log || true
             exit 1
           }
-          test -f app/generated/sources.cmake
+          test -f app/generated/default/sources.cmake
           du -sh app/generated/default app/src/copias_literales
 
       - name: Enable Android native build
