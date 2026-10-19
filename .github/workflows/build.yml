@@ -85,7 +85,7 @@ jobs:
         run: |
           cmake -S sdk -B out/host -G Ninja -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
-            -DCMAKE_C_FLAGS="-mssse3" -DCMAKE_CXX_FLAGS="-mssse3"
+            -DCMAKE_C_FLAGS="-mssse3" -DCMAKE_CXX_FLAGS="-mssse3 -D__cpp_lib_expected=202202L"
           cmake --build out/host --target rexglue -j"$(nproc)"
 
       - name: Generate recompiled game code
