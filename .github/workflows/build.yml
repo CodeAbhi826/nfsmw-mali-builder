@@ -78,7 +78,7 @@ jobs:
       - name: Install host build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libx11-xcb-dev libxcb1-dev libx11-dev libxext-dev libxrandr-dev libxi-dev libxkbcommon-dev
+          sudo apt-get install -y libx11-xcb-dev libxcb1-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxinerama-dev libxss-dev libxtst-dev libxkbcommon-dev libwayland-dev
 
       - name: Build host rexglue code generator
         working-directory: src
