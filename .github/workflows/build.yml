@@ -91,7 +91,10 @@ jobs:
       - name: Generate recompiled game code
         working-directory: src
         run: |
-          PYTHON=python3 REXGLUE="$PWD/out/host/rexglue" bash tools/codegen.sh app || {
+          REXGLUE_BIN="$(find "$PWD/out" "$PWD/sdk/out" -type f -name rexglue -perm -u+x 2>/dev/null | head -1)"
+          test -n "$REXGLUE_BIN"
+          echo "REXGLUE=$REXGLUE_BIN"
+          PYTHON=python3 REXGLUE="$REXGLUE_BIN" bash tools/codegen.sh app || {
             echo '--- app/codegen.log ---'
             cat app/codegen.log || true
             exit 1
