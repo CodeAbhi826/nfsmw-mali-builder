@@ -142,8 +142,11 @@ jobs:
           if grep -qi "Android Debug" /tmp/certs.txt; then
             echo "APK is signed with the debug key"; exit 1
           fi
-          grep -q "78:F5:8C:80:10:7A:94:CC:B1:9D:E1:F6:8A:A9:9A:B0:72:89:69:C6:57:D4:12:FA:E0:47:7D:80:A5:39:14:6A" /tmp/certs.txt || {
-            echo "Unexpected signing certificate"; exit 1; }
+          # apksigner prints the digest lowercase and without separators; normalise both sides.
+          DIGEST=$(grep -i "SHA-256 digest" /tmp/certs.txt | head -1 | awk '{print $NF}' | tr -d ':' | tr 'A-Z' 'a-z')
+          EXPECTED="78f58c80107a94ccb19de1f68aa99ab0728969c657d412fae0477d80a539146a"
+          echo "signer sha256: $DIGEST"
+          test "$DIGEST" = "$EXPECTED" || { echo "Unexpected signing certificate"; exit 1; }
 
       - name: Collect artifacts
         run: |
