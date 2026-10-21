@@ -150,11 +150,21 @@ jobs:
 
       - name: Collect artifacts
         run: |
+          set -euo pipefail
           mkdir -p out
-          find src/android/app/build/outputs/apk/release -name "*.apk" -exec cp {} out/ \;
+          APK="$(find src/android/app/build/outputs/apk/release -name '*.apk' | head -1)"
+          test -n "$APK"
+          BT=/usr/local/lib/android/sdk/build-tools/35.0.0
+          "$BT/aapt2" dump badging "$APK" | head -1
+          VCODE="$("$BT/aapt2" dump badging "$APK" | sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p" | head -1)"
+          VNAME="$("$BT/aapt2" dump badging "$APK" | sed -n "s/.*versionName='\([^']*\)'.*/\1/p" | head -1)"
+          echo "APK reports versionCode=$VCODE versionName=$VNAME"
+          test "$VCODE" = "${{ inputs.version_code }}" || { echo "APK versionCode $VCODE does not match the requested ${{ inputs.version_code }}"; exit 1; }
+          test "$VNAME" = "${{ inputs.version_name }}" || { echo "APK versionName $VNAME does not match the requested ${{ inputs.version_name }}"; exit 1; }
+          cp "$APK" "out/NFSMW-Recompiled-${{ inputs.version_name }}-${{ inputs.version_code }}.apk"
           ls -la out
           sha256sum out/*.apk
-          echo "versionCode=${{ inputs.version_code }} versionName=${{ inputs.version_name }}" > out/VERSION.txt
+          echo "versionCode=$VCODE versionName=$VNAME" > out/VERSION.txt
 
       - uses: actions/upload-artifact@v4
         with:
