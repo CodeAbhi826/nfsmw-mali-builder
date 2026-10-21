@@ -158,3 +158,4 @@ jobs:
           name: nfsmw-mali-engine-apk-${{ inputs.version_name }}-${{ github.run_number }}
           path: out/*
           if-no-files-found: error
+          retention-days: 1
