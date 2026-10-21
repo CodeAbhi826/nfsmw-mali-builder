@@ -21,7 +21,7 @@ on:
         default: "1.0.0"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -166,9 +166,18 @@ jobs:
           sha256sum out/*.apk
           echo "versionCode=$VCODE versionName=$VNAME" > out/VERSION.txt
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: nfsmw-mali-engine-apk-${{ inputs.version_name }}-${{ github.run_number }}
-          path: out/*
-          if-no-files-found: error
-          retention-days: 1
+      # A draft release is invisible to everyone without write access, unlike an
+      # Actions artifact, which any signed-in user can see and download. The draft
+      # is downloaded, verified and deleted; only a real release is ever public.
+      - name: Upload to a hidden draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="build-${{ github.run_number }}"
+          gh release create "$TAG" out/*.apk out/VERSION.txt \
+            --repo "$GITHUB_REPOSITORY" \
+            --draft \
+            --title "Build ${{ github.run_number }}: ${{ inputs.version_name }} (${{ inputs.version_code }})" \
+            --notes "Automatic engine build from ${{ inputs.ref }} at ${{ github.sha }}. Draft: download, verify and delete."
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[] | {name, size}'
