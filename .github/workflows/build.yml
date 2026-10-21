@@ -11,6 +11,14 @@ on:
         description: "Android SDK CMake package"
         required: true
         default: "3.31.6"
+      version_code:
+        description: "versionCode for the APK (must grow for every release)"
+        required: true
+        default: "100"
+      version_name:
+        description: "versionName for the APK"
+        required: true
+        default: "1.0.0"
 
 permissions:
   contents: read
@@ -105,9 +113,37 @@ jobs:
       - name: Enable Android native build
         run: python3 harness/scripts/enable_native_build.py src/android/app/build.gradle "${{ inputs.cmake_version }}"
 
+      - name: Decode release keystore
+        env:
+          KEYSTORE_B64: ${{ secrets.NFSMW_KEYSTORE_B64 }}
+        run: |
+          test -n "$KEYSTORE_B64" || { echo "NFSMW_KEYSTORE_B64 is empty"; exit 1; }
+          printf '%s' "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/nfsmw-release.jks"
+          test -s "$RUNNER_TEMP/nfsmw-release.jks"
+          {
+            echo "NFSMW_KEYSTORE=$RUNNER_TEMP/nfsmw-release.jks"
+            echo "NFSMW_KEYSTORE_PASSWORD=${{ secrets.NFSMW_KEYSTORE_PASSWORD }}"
+            echo "NFSMW_KEY_ALIAS=${{ secrets.NFSMW_KEY_ALIAS }}"
+            echo "NFSMW_KEY_PASSWORD=${{ secrets.NFSMW_KEY_PASSWORD }}"
+            echo "NFSMW_VERSION_CODE=${{ inputs.version_code }}"
+            echo "NFSMW_VERSION_NAME=${{ inputs.version_name }}"
+          } >> "$GITHUB_ENV"
+
       - name: Build APK
         working-directory: src/android
         run: ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Verify signature (must be the release key, not the debug key)
+        run: |
+          APK="$(find src/android/app/build/outputs/apk/release -name '*.apk' | head -1)"
+          test -n "$APK"
+          BT=/usr/local/lib/android/sdk/build-tools/35.0.0
+          "$BT/apksigner" verify --print-certs "$APK" | tee /tmp/certs.txt
+          if grep -qi "Android Debug" /tmp/certs.txt; then
+            echo "APK is signed with the debug key"; exit 1
+          fi
+          grep -q "78:F5:8C:80:10:7A:94:CC:B1:9D:E1:F6:8A:A9:9A:B0:72:89:69:C6:57:D4:12:FA:E0:47:7D:80:A5:39:14:6A" /tmp/certs.txt || {
+            echo "Unexpected signing certificate"; exit 1; }
 
       - name: Collect artifacts
         run: |
@@ -115,9 +151,10 @@ jobs:
           find src/android/app/build/outputs/apk/release -name "*.apk" -exec cp {} out/ \;
           ls -la out
           sha256sum out/*.apk
+          echo "versionCode=${{ inputs.version_code }} versionName=${{ inputs.version_name }}" > out/VERSION.txt
 
       - uses: actions/upload-artifact@v4
         with:
-          name: nfsmw-mali-engine-apk-${{ github.run_number }}
-          path: out/*.apk
+          name: nfsmw-mali-engine-apk-${{ inputs.version_name }}-${{ github.run_number }}
+          path: out/*
           if-no-files-found: error
